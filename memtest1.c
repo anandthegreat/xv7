@@ -37,6 +37,7 @@ mem(void)
 		((int*)m1)[2] = count++;
 		m1 = m2;
 		cur += 4096;
+
 	}
 	((int*)m1)[2] = count;
 	total_count = count;

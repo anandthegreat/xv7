@@ -232,7 +232,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     return oldsz;
 
   a = PGROUNDUP(oldsz);
-  
+
   for(; a < newsz; a += PGSIZE){
     mem = kalloc();
     if(mem == 0){
@@ -304,16 +304,43 @@ freevm(pde_t *pgdir)
 // Select a page-table entry which is mapped
 // but not accessed. Notice that the user memory
 // is mapped between 0...KERNBASE.
+
+/* ********xv7*************
+i) in the kmem.freelist, find a page whose access bit is not setting
+ii) if (i) is unable to find any such page, randomly reset access bit
+    of 10% of the allocated pages and call select_a_victim() again
+*/
+
 pte_t*
 select_a_victim(pde_t *pgdir)
 {
-	return 0;
+  pte_t *pte;
+  for(int i=0; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
+    if((pte=walkpgdir(pgdir,(char*)i,0))!= 0) //if mapping exists (0 as 3rd argument as we dont want to create mapping if does not exists)
+		  {
+			     if(PTE_P & !PTE_A) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
+				       return (pte_t*)(pte);
+		  }
+	}
+  clearaccessbit(pgdir);  // it the above loop was unable to find any page with access bit 0
+	return select_a_victim(pgdir); //call select_a_victim() again as now it will find victim pages
 }
 
 // Clear access bit of a random pte.
 void
 clearaccessbit(pde_t *pgdir)
-{
+{ pte_t *pte;
+  int count=0;
+  for(int i=0;i<KERNBASE;i+=PGSIZE){
+      if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
+
+        if(PTE_P & PTE_A) { //access bit is 1
+            *pte &= ~PTE_A;
+        }
+      }
+      if(count==103)   //10% of the 1024 pages cleared
+        return;
+  }
 }
 
 // return the disk block-id, if the virtual address
@@ -426,4 +453,3 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 // Blank page.
 //PAGEBREAK!
 // Blank page.
-

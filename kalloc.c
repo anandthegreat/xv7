@@ -33,13 +33,13 @@ kinit1(void *vstart, void *vend)
 {
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
-  freerange(vstart, vend);
+  freerange(vstart, vend);        //to add pages to freelist
 }
 
 void
 kinit2(void *vstart, void *vend)
 {
-  freerange(vstart, vend);
+  freerange(vstart, vend);        //to add pages to freelist
   kmem.use_lock = 1;
 }
 
@@ -93,4 +93,3 @@ kalloc(void)
     release(&kmem.lock);
   return (char*)r;
 }
-
