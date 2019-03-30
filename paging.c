@@ -65,17 +65,37 @@ map_address(pde_t *pgdir, uint addr)
 	// cprintf(curproc->name);
 	uint cursz= curproc->sz;
 	uint a= PGROUNDDOWN(rcr2());			//rounds the address to a multiple of page size (PGSIZE)
-	char *mem=kalloc();
+	char *mem=kalloc();    //allocate a physical page
 
 	if(mem==0){
 		//************xv7 swapping yha krni hai**************
-		panic("allocuvm out of memory xv7/n");
+    pte_t* pte=select_a_victim(pgdir);         //returns *pte
+    if(pte==0){                                     //If this is true, victim is not found in 1st attempt. Inside this function
+      cprintf("No victim found in 1st attempt. Clearing access bits.");
+      clearaccessbit(pgdir);                        //Accessbits are cleared,
+
+      cprintf("Finding victim again, after clearing access bits of 10%% pages.");
+      pte=select_a_victim(pgdir);                   //then victim is selected again. Victim is found this time.
+
+      if(pte!=0) cprintf("victim found");
+      else cprintf("Not found even in second attempt." );
+    }
+    else{                                           //This else is true, then victim is found in first attempt.
+      cprintf("Victim found in 1st attempt.");
+    }
+
+    
+
+
+
+
+    panic("allocuvm out of memory xv7 in mem==0/n");
 		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 	}
 
 	memset(mem,0,PGSIZE);
-	if(mappages(pgdir,(char*)a,PGSIZE, V2P(mem), PTE_W | PTE_U | PTE_P)<0){
-		panic("allocuvm out of memory xv7/n");
+	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U | PTE_P)<0){
+		panic("allocuvm out of memory xv7 in mappages/n");
 		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 		kfree(mem);
 	}

@@ -23,6 +23,7 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static void itrunc(struct inode*);
+static void bfree(int dev, uint b);
 // there should be one superblock per disk device, but we run with
 // only one device
 struct superblock sb;
@@ -59,7 +60,6 @@ balloc(uint dev)
 {
   int b, bi, m;
   struct buf *bp;
-
   bp = 0;
   for(b = 0; b < sb.size; b += BPB){
     bp = bread(dev, BBLOCK(b, sb));
@@ -86,14 +86,66 @@ uint
 balloc_page(uint dev)
 {
   //*****************xv7*****************
-	return -1;
+  int b, bi, m;
+  struct buf *bp;
+  /*
+    Number of blocks in xv6=20985
+    if we get non consecutive blocks, then we need to first mark it as in use
+    and then free them when we get 8 consecutive blocks,
+    otherwise, we will get same non consecutive blocks again and again
+  */
+  uint allocatedBlocks[100000];
+  int indexNCB=-1;     //pointer for above array, keeps track till where it is filled
+
+  bp = 0;
+  for(int i=0;i<8;i++){
+
+      for(b = 0; b < sb.size; b += BPB){    //for each block in superblock
+        /*
+        Start from the first free bitmap block (some bitmap bits may not be free in this block, but we
+        need 8 consecutive bitmap bits which are free in this block.
+        If 8 consecutive bits aren't free, mark all of them as used and check in another block.
+        */
+        bp = bread(dev, BBLOCK(b, sb));
+        /* for each bit in this block (this loop will run 4096 times for each block)
+           as each block contains 512 bytes =512*8=4096 bits
+        */
+        for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+          m = 1 << (bi % 8);        //will help in checking the bitmap bit value
+          if((bp->data[bi/8] & m) == 0){  // Is block free? (i.e, it the bitmap bit 0? if yes , the corresponding block will be free)
+            bp->data[bi/8] |= m;  // Mark block in use. i.e. set bitmap bit to 1.
+            log_write(bp);
+            brelse(bp);           //release the lock
+            bzero(dev, b + bi);   //zero the block which we are going to return becauseI think it may contain garbage data.
+            indexNCB++;
+            allocatedBlocks[indexNCB]= b + bi;
+          }
+        }
+        brelse(bp);
+      }
+
+      if(i>0){
+          if((allocatedBlocks[indexNCB]-allocatedBlocks[indexNCB-1])!=1)  //this allocated block in non consecutive
+          {
+              i=0;    //start allocating blocks again
+          }
+      }
+}
+    for(int i=0;i<=indexNCB-8;i++){
+      bfree(dev,allocatedBlocks[i]);    //free unnecesarily allocated blocks
+    }
+	  return allocatedBlocks[indexNCB-7];  //return last 8 blocks (address of 1st block among them)
 }
 
 /* Free disk blocks allocated using balloc_page.
  */
 void
 bfree_page(int dev, uint b)
-{
+{ //*******************xv7*****************
+  for(uint i=0;i<8;i++){
+    bfree(dev,b+i);
+  }
+
 }
 
 // Free a disk block.

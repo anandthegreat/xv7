@@ -316,14 +316,20 @@ select_a_victim(pde_t *pgdir)
 {
   pte_t *pte;
   for(int i=0; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
+    cprintf("i wala loop");
     if((pte=walkpgdir(pgdir,(char*)i,0))!= 0) //if mapping exists (0 as 3rd argument as we dont want to create mapping if does not exists)
 		  {
-			     if(PTE_P & !PTE_A) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
-				       return (pte_t*)(pte);
-		  }
+			     if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
+           {   if(! (*pte & PTE_A) )             //access bit is NOT set.
+               {
+                 cprintf("kedia 3456889 hai");
+                 return (pte_t*)(pte);
+               }
+           }
+      }
 	}
-  clearaccessbit(pgdir);  // it the above loop was unable to find any page with access bit 0
-	return select_a_victim(pgdir); //call select_a_victim() again as now it will find victim pages
+  cprintf("bahar aa gaya  ");
+  return 0;
 }
 
 // Clear access bit of a random pte.
@@ -333,13 +339,23 @@ clearaccessbit(pde_t *pgdir)
   int count=0;
   for(int i=0;i<KERNBASE;i+=PGSIZE){
       if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
-
-        if(PTE_P & PTE_A) { //access bit is 1
-            *pte &= ~PTE_A;
+        cprintf("walkpkgdir mei");
+        *pte &= ~PTE_A;
+        if(1==1){
+        // if((*pte & PTE_P) & (*pte & PTE_A)) { //access bit is 1
+            cprintf("andar");
+            count=count+1;
+            if(count<103){
+              cprintf("103 se cum ho gya");
+            }
+            else{
+              cprintf("103 se zyaada ho gya");
+            }
         }
-      }
-      if(count==103)   //10% of the 1024 pages cleared
-        return;
+    }
+    cprintf("chalo vappis");
+    if(count==103)   //10% of the 1024 pages cleared
+      return;
   }
 }
 
