@@ -89,6 +89,20 @@ map_address(pde_t *pgdir, uint addr)
 	// cprintf(curproc->name);
 	uint cursz= curproc->sz;
 	uint a= PGROUNDDOWN(rcr2());			//rounds the address to a multiple of page size (PGSIZE)
+
+  //int wasPageSwapped=0;
+  //pte_t *pte1=walkpgdir(pgdir, (char*)a, 0);
+  // int blockid=-1;                 //disk id where the page was swapped
+  // char swappedPage[4096]="";      //to get back page from disk, if swapped
+  // if(pte1!=0){
+  //   if(*pte1 & PTE_SWAPPED){
+  //     wasPageSwapped=1;
+  //     blockid=getswappedblk(pgdir,addr);      //disk id where the page was swapped
+  //     read_page_from_disk(ROOTDEV,swappedPage,blockid);
+  //   }
+  // }
+
+
 	char *mem=kalloc();    //allocate a physical page
 
 	if(mem==0){
@@ -115,16 +129,24 @@ map_address(pde_t *pgdir, uint addr)
 		// deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 
 	}
+  // if(wasPageSwapped==1){
+  //   memmove(mem,swappedPage,4096);
+  //   *pte1=V2P(mem) | PTE_W | PTE_U | PTE_P;
+  //   *pte1 &= ~PTE_SWAPPED;
+  //   bfree_page(ROOTDEV,blockid);
+  // }
 
-	memset(mem,0,PGSIZE);
-	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U | PTE_P)<0){
-		panic("allocuvm out of memory xv7 in mappages/n");
-		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
-		kfree(mem);
-	}
-	else{
-		cprintf("mappages working");
-	}
+//  else{
+    memset(mem,0,PGSIZE);
+  	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U | PTE_P)<0){
+  		panic("allocuvm out of memory xv7 in mappages/n");
+  		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
+  		kfree(mem);
+  	}
+  	else{
+  	//	cprintf("mappages working");
+  	}
+//  }
 
 	// panic("map_address is not implemented");
 }
