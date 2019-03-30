@@ -98,6 +98,24 @@ bget(uint dev, uint blockno)
 void
 write_page_to_disk(uint dev, char *pg, uint blk)
 {
+  //****************xv7**********************
+  struct buf* buffer;
+  int blockno=0;
+  int ithPartOfPage=0;    //which part of page (out of 8) is to be written to disk
+  for(int i=0;i<8;i++){
+    begin_op();           //for atomicity , the block must be written to the disk
+    ithPartOfPage=i*512;
+    blockno=blk+i;
+    buffer=bread(ROOTDEV,blockno);
+    /*
+    Writing physical page to disk by dividing it into 8 pieces (4096 bytes/8 = 512 bytes = 1 block)
+    As one page requires 8 disk blocks
+    */
+    memmove(buffer->data,pg+ithPartOfPage,512);   // write 512 bytes to the block
+    log_write(buffer);
+    brelse(buffer);                               //release lock
+    end_op();
+  }
 }
 
 /* Read 4096 bytes from the eight consecutive
@@ -106,6 +124,18 @@ write_page_to_disk(uint dev, char *pg, uint blk)
 void
 read_page_from_disk(uint dev, char *pg, uint blk)
 {
+  //**************xv7************************
+  struct buf* buffer;
+  int blockno=0;
+  int ithPartOfPage=0;
+  for(int i=0;i<8;i++){
+    ithPartOfPage=i*512;
+    blockno=blk+i;
+    buffer=bread(ROOTDEV,blockno);    //if present in buffer, returns from buffer else from disk
+    memmove(pg+ithPartOfPage, buffer->data,512);  //write to pg from buffer
+    brelse(buffer);                   //release lock
+  }
+
 }
 
 // Return a locked buf with the contents of the indicated block.
@@ -138,7 +168,7 @@ brelse(struct buf *b)
 {
   if(!holdingsleep(&b->lock))
     panic("brelse");
-	
+
   releasesleep(&b->lock);
 
   acquire(&bcache.lock);
@@ -152,9 +182,8 @@ brelse(struct buf *b)
     bcache.head.next->prev = b;
     bcache.head.next = b;
   }
-  
+
   release(&bcache.lock);
 }
 //PAGEBREAK!
 // Blank page.
-

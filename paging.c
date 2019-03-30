@@ -34,6 +34,9 @@ void
 swap_page_from_pte(pte_t *pte)
 {
 	//************xv7*************
+  uint diskPage=balloc_page(ROOTDEV);
+  
+
 }
 
 /* Select a victim and swap the contents to the disk.
@@ -84,7 +87,7 @@ map_address(pde_t *pgdir, uint addr)
       cprintf("Victim found in 1st attempt.");
     }
 
-    
+    swap_page_from_pte(pte);  //swap victim page to disk
 
 
 

@@ -132,7 +132,7 @@ balloc_page(uint dev)
       }
 }
     for(int i=0;i<=indexNCB-8;i++){
-      bfree(dev,allocatedBlocks[i]);    //free unnecesarily allocated blocks
+      bfree(ROOTDEV,allocatedBlocks[i]);    //free unnecesarily allocated blocks
     }
 	  return allocatedBlocks[indexNCB-7];  //return last 8 blocks (address of 1st block among them)
 }
@@ -143,7 +143,7 @@ void
 bfree_page(int dev, uint b)
 { //*******************xv7*****************
   for(uint i=0;i<8;i++){
-    bfree(dev,b+i);
+    bfree(ROOTDEV,b+i);
   }
 
 }
