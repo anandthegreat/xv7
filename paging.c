@@ -31,12 +31,33 @@ myprocXV7(void) {
  * pte.
  */
 void
-swap_page_from_pte(pte_t *pte)
+swap_page_from_pte(pte_t *pte,pde_t *pgdir)
 {
 	//************xv7*************
+  uint physicalAddress=PTE_ADDR(*pte);
   uint diskPage=balloc_page(ROOTDEV);
-  
+  char *vaSwapPage=kalloc();                 //virtual address of physical page which needs to be swapped to disk
+  memmove(vaSwapPage,(char*)P2V(physicalAddress),PGSIZE); //copy va to vaSwapPage : copied from 2071: copyuvm()
 
+  write_page_to_disk(ROOTDEV,vaSwapPage,diskPage);    //write this page to disk
+  *pte &= ~PTE_P;                 //clear present bit as the page has been swapped to the disk
+  uint blockid=diskPage<<12;
+
+  /*
+    Store block id and swapped flag in the pte entry whose page was swapped to the disk
+    So, when next time this pte is dereferenced, we know that the page has been swapped to
+    the disk and we can bring this page again to memory
+  */
+  *pte = blockid | PTE_SWAPPED;
+
+  /*PTE_SWAPPED (0x200) : created by me , needs to be set when swapping a page. */
+
+  /*WHEN PAGE TABLE ENTRIES ARE MODIFIED, THE HARDWARE STILL USES CACHED ENTRIES IN TLB,
+    SO WE NEED TO INVALIDATE TLB ENTRY USING EITHER invlpg INSTRUCTION OR
+    lcr3
+  */
+  lcr3(V2P(pgdir));         //This operation ensures that the older TLB entries are flushed
+  kfree(P2V(physicalAddress));
 }
 
 /* Select a victim and swap the contents to the disk.
@@ -87,13 +108,12 @@ map_address(pde_t *pgdir, uint addr)
       cprintf("Victim found in 1st attempt.");
     }
 
-    swap_page_from_pte(pte);  //swap victim page to disk
+    swap_page_from_pte(pte,pgdir);  //swap victim page to disk
+    mem=kalloc();             //now a physical page has been swapped to disk and free, so this time we will get physical page for sure.
 
+    // panic("allocuvm out of memory xv7 in mem==0/n");
+		// deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 
-
-
-    panic("allocuvm out of memory xv7 in mem==0/n");
-		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 	}
 
 	memset(mem,0,PGSIZE);

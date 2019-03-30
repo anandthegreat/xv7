@@ -340,13 +340,12 @@ clearaccessbit(pde_t *pgdir)
   for(int i=0;i<KERNBASE;i+=PGSIZE){
       if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
         cprintf("walkpkgdir mei");
-        *pte &= ~PTE_A;
-        if(1==1){
+        if(*pte & PTE_P){
         // if((*pte & PTE_P) & (*pte & PTE_A)) { //access bit is 1
-            cprintf("andar");
+            *pte &= ~PTE_A;
             count=count+1;
             if(count<103){
-              cprintf("103 se cum ho gya");
+              cprintf("103 se kam hai");
             }
             else{
               cprintf("103 se zyaada ho gya");
@@ -364,7 +363,11 @@ clearaccessbit(pde_t *pgdir)
 int
 getswappedblk(pde_t *pgdir, uint va)
 {
-  return -1;
+  //***************xv7**************
+  pte_t *pte= walkpgdir(pgdir,(char*)va,0);
+  //first 20 bits contain block-id, extract them from *pte
+  int block_id= (*pte)>>12;
+  return block_id;
 }
 
 // Clear PTE_U on a page. Used to create an inaccessible
