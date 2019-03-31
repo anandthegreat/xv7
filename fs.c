@@ -96,11 +96,11 @@ balloc_page(uint dev)
   */
   uint allocatedBlocks[100000];
   int indexNCB=-1;     //pointer for above array, keeps track till where it is filled
-
   bp = 0;
   for(int i=0;i<8;i++){
 
       for(b = 0; b < sb.size; b += BPB){    //for each block in superblock
+
         /*
         Start from the first free bitmap block (some bitmap bits may not be free in this block, but we
         need 8 consecutive bitmap bits which are free in this block.
@@ -114,7 +114,7 @@ balloc_page(uint dev)
           m = 1 << (bi % 8);        //will help in checking the bitmap bit value
           if((bp->data[bi/8] & m) == 0){  // Is block free? (i.e, it the bitmap bit 0? if yes , the corresponding block will be free)
             bp->data[bi/8] |= m;  // Mark block in use. i.e. set bitmap bit to 1.
-            log_write(bp);
+            log_write(bp);        //dikkat yahan hai....  
             brelse(bp);           //release the lock
             bzero(dev, b + bi);   //zero the block which we are going to return becauseI think it may contain garbage data.
             indexNCB++;

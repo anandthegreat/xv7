@@ -268,6 +268,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   a = PGROUNDUP(newsz);
   for(; a  < oldsz; a += PGSIZE){
     pte = walkpgdir(pgdir, (char*)a, 0);
+
     if(!pte)
       a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
     else if((*pte & PTE_P) != 0){
@@ -278,6 +279,10 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(v);
       *pte = 0;
     }
+    else if(*pte & PTE_SWAPPED){
+        int block_id= (*pte)>>12;
+        bfree_page(ROOTDEV,block_id);
+      }
   }
   return newsz;
 }
@@ -322,7 +327,7 @@ select_a_victim(pde_t *pgdir)
 			     if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
            {   if(! (*pte & PTE_A) )             //access bit is NOT set.
                {
-                 cprintf("kedia 3456889 hai");
+                 cprintf("apun 3456889 hai");
                  return (pte_t*)(pte);
                }
            }

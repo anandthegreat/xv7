@@ -452,6 +452,7 @@ sys_pipe(void)
 int
 sys_bstat(void)
 {
+  //************xv7************
 	return numallocblocks;
 }
 
@@ -463,7 +464,7 @@ int
 sys_swap(void)
 {
   uint addr;
-
+  
   if(argint(0, (int*)&addr) < 0)
     return -1;
   // swap addr

@@ -34,9 +34,13 @@ void
 swap_page_from_pte(pte_t *pte,pde_t *pgdir)
 {
 	//************xv7*************
+
   uint physicalAddress=PTE_ADDR(*pte);
+  cprintf("\nIn swap page from pte\n");
   uint diskPage=balloc_page(ROOTDEV);
+
   char *vaSwapPage=kalloc();                 //virtual address of physical page which needs to be swapped to disk
+
   memmove(vaSwapPage,(char*)P2V(physicalAddress),PGSIZE); //copy va to vaSwapPage : copied from 2071: copyuvm()
 
   write_page_to_disk(ROOTDEV,vaSwapPage,diskPage);    //write this page to disk
@@ -134,6 +138,7 @@ map_address(pde_t *pgdir, uint addr)
   //   *pte1=V2P(mem) | PTE_W | PTE_U | PTE_P;
   //   *pte1 &= ~PTE_SWAPPED;
   //   bfree_page(ROOTDEV,blockid);
+  //   lcr3(V2P(pgdir));
   // }
 
 //  else{
@@ -144,7 +149,7 @@ map_address(pde_t *pgdir, uint addr)
   		kfree(mem);
   	}
   	else{
-  	//	cprintf("mappages working");
+  		cprintf("mappages working");
   	}
 //  }
 
