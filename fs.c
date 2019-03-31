@@ -66,10 +66,12 @@ balloc(uint dev)
     for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
+        //begin_op();
         bp->data[bi/8] |= m;  // Mark block in use.
         log_write(bp);
         brelse(bp);
         bzero(dev, b + bi);
+      //  end_op();
         return b + bi;
       }
     }
@@ -86,8 +88,8 @@ uint
 balloc_page(uint dev)
 {
   //*****************xv7*****************
-  int b, bi, m;
-  struct buf *bp;
+  //int b, bi, m;
+//  struct buf *bp;
   /*
     Number of blocks in xv6=20985
     if we get non consecutive blocks, then we need to first mark it as in use
@@ -96,34 +98,45 @@ balloc_page(uint dev)
   */
   uint allocatedBlocks[100000];
   int indexNCB=-1;     //pointer for above array, keeps track till where it is filled
-  bp = 0;
+  // bp = 0;
   for(int i=0;i<8;i++){
 
-      for(b = 0; b < sb.size; b += BPB){    //for each block in superblock
+      // for(b = 0; b < sb.size; b += BPB){    //for each block in superblock
+      //
+      //   /*
+      //   Start from the first free bitmap block (some bitmap bits may not be free in this block, but we
+      //   need 8 consecutive bitmap bits which are free in this block.
+      //   If 8 consecutive bits aren't free, mark all of them as used and check in another block.
+      //   */
+      //   bp = bread(dev, BBLOCK(b, sb));
+      //   /* for each bit in this block (this loop will run 4096 times for each block)
+      //      as each block contains 512 bytes =512*8=4096 bits
+      //   */
+      //   for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+      //     m = 1 << (bi % 8);        //will help in checking the bitmap bit value
+      //     if((bp->data[bi/8] & m) == 0){  // Is block free? (i.e, it the bitmap bit 0? if yes , the corresponding block will be free)
+      //       begin_op();
+      //       bp->data[bi/8] |= m;  // Mark block in use. i.e. set bitmap bit to 1.
+      //       log_write(bp);        //dikkat yahan hai....
+      //       cprintf("\n\n\n\nthe dark knight rises\n");
+      //       if(holdingsleep(&bp->lock))
+      //         brelse(bp);           //release the lock
+      //       bzero(dev, b + bi);   //zero the block which we are going to return becauseI think it may contain garbage data.
+      //       end_op();
+      //       indexNCB++;
+      //       allocatedBlocks[indexNCB]= b + bi;
+      //     }
+      //   }
+      //   cprintf("\n\n\n\nbruce wayne\n");
+      //   if(holdingsleep(&bp->lock))
+      //     brelse(bp);
+      // }
 
-        /*
-        Start from the first free bitmap block (some bitmap bits may not be free in this block, but we
-        need 8 consecutive bitmap bits which are free in this block.
-        If 8 consecutive bits aren't free, mark all of them as used and check in another block.
-        */
-        bp = bread(dev, BBLOCK(b, sb));
-        /* for each bit in this block (this loop will run 4096 times for each block)
-           as each block contains 512 bytes =512*8=4096 bits
-        */
-        for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
-          m = 1 << (bi % 8);        //will help in checking the bitmap bit value
-          if((bp->data[bi/8] & m) == 0){  // Is block free? (i.e, it the bitmap bit 0? if yes , the corresponding block will be free)
-            bp->data[bi/8] |= m;  // Mark block in use. i.e. set bitmap bit to 1.
-            log_write(bp);        //dikkat yahan hai....  
-            brelse(bp);           //release the lock
-            bzero(dev, b + bi);   //zero the block which we are going to return becauseI think it may contain garbage data.
-            indexNCB++;
-            allocatedBlocks[indexNCB]= b + bi;
-          }
-        }
-        brelse(bp);
-      }
-
+      indexNCB++;
+      begin_op();
+      allocatedBlocks[indexNCB] = balloc(dev);
+      end_op();
+      
       if(i>0){
           if((allocatedBlocks[indexNCB]-allocatedBlocks[indexNCB-1])!=1)  //this allocated block in non consecutive
           {

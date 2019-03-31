@@ -321,16 +321,19 @@ select_a_victim(pde_t *pgdir)
 {
   pte_t *pte;
   for(int i=0; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
-    cprintf("i wala loop");
+    cprintf("i wala loop\t");
     if((pte=walkpgdir(pgdir,(char*)i,0))!= 0) //if mapping exists (0 as 3rd argument as we dont want to create mapping if does not exists)
-		  {
+		  {     cprintf("walkpgdir successful\t");
 			     if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
-           {   if(! (*pte & PTE_A) )             //access bit is NOT set.
+           {   if(*pte & ~PTE_A)             //access bit is NOT set.
                {
-                 cprintf("apun 3456889 hai");
+                 cprintf("apun 3456889 hai\n");
                  return (pte_t*)(pte);
                }
            }
+      }
+      else{
+        cprintf("walkpgdir failed \n ");
       }
 	}
   cprintf("bahar aa gaya  ");
@@ -409,7 +412,19 @@ copyuvm(pde_t *pgdir, uint sz)
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
+    {
       goto bad;
+      //swap a page to disk and kalloc
+      // pte_t* pte=select_a_victim(pgdir);              //returns *pte
+      // if(pte==0){                                     //If this is true, victim is not found in 1st attempt. Inside this function
+      //   clearaccessbit(pgdir);                        //Accessbits are cleared,
+      //   pte=select_a_victim(pgdir);                   //then victim is selected again. Victim is found this time.
+      // }
+      // swap_page_from_pte(pte,pgdir);                  //swap victim page to disk
+      // mem=kalloc();
+      // if(mem==0)
+      //   cprintf("unable to get memory in copyuvm");
+    }
 
     memmove(mem, (char*)P2V(pa), PGSIZE);
     if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)

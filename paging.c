@@ -36,10 +36,11 @@ swap_page_from_pte(pte_t *pte,pde_t *pgdir)
 	//************xv7*************
 
   uint physicalAddress=PTE_ADDR(*pte);
-  cprintf("\nIn swap page from pte\n");
+
   uint diskPage=balloc_page(ROOTDEV);
 
-  char *vaSwapPage=kalloc();                 //virtual address of physical page which needs to be swapped to disk
+//  char *vaSwapPage=kalloc();                 //virtual address of physical page which needs to be swapped to disk
+  char vaSwapPage[4096]="";
 
   memmove(vaSwapPage,(char*)P2V(physicalAddress),PGSIZE); //copy va to vaSwapPage : copied from 2071: copyuvm()
 
@@ -60,8 +61,11 @@ swap_page_from_pte(pte_t *pte,pde_t *pgdir)
     SO WE NEED TO INVALIDATE TLB ENTRY USING EITHER invlpg INSTRUCTION OR
     lcr3
   */
+
   lcr3(V2P(pgdir));         //This operation ensures that the older TLB entries are flushed
   kfree(P2V(physicalAddress));
+  cprintf("\nIn swap page from pte\n");
+
 }
 
 /* Select a victim and swap the contents to the disk.
@@ -108,7 +112,8 @@ map_address(pde_t *pgdir, uint addr)
 
 
 	char *mem=kalloc();    //allocate a physical page
-
+  if(mem!=0)
+    cprintf("\n\n kalloc done without swapping\n\n");
 	if(mem==0){
 		//************xv7 swapping yha krni hai**************
     pte_t* pte=select_a_victim(pgdir);         //returns *pte
@@ -128,7 +133,7 @@ map_address(pde_t *pgdir, uint addr)
 
     swap_page_from_pte(pte,pgdir);  //swap victim page to disk
     mem=kalloc();             //now a physical page has been swapped to disk and free, so this time we will get physical page for sure.
-
+    cprintf("kalloc success\n"); 
     // panic("allocuvm out of memory xv7 in mem==0/n");
 		// deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
 
