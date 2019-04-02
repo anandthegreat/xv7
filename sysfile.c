@@ -16,6 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 #include "paging.h"
+#include "memlayout.h"
 
 extern int numallocblocks;
 
@@ -53,6 +54,28 @@ fdalloc(struct file *f)
     }
   }
   return -1;
+}
+
+static pte_t *
+walkpgdir2(pde_t *pgdir, const void *va, int alloc)
+{
+  pde_t *pde;
+  pte_t *pgtab;
+
+  pde = &pgdir[PDX(va)];
+  if(*pde & PTE_P){
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+  } else {
+    if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+      return 0;
+    // Make sure all those PTE_P bits are zero.
+    memset(pgtab, 0, PGSIZE);
+    // The permissions here are overly generous, but they can
+    // be further restricted by the permissions in the page table
+    // entries, if necessary.
+    *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
+  }
+  return &pgtab[PTX(va)];
 }
 
 int
@@ -460,13 +483,20 @@ sys_bstat(void)
  */
 
  //*************xv7************
+
 int
 sys_swap(void)
 {
   uint addr;
-  
+
   if(argint(0, (int*)&addr) < 0)
     return -1;
   // swap addr
+  struct proc *currentProcess=myproc();
+  pde_t *pgdir=currentProcess->pgdir;
+  pte_t *pte=walkpgdir2(pgdir,(char*)addr,1);
+  if(*pte & PTE_P){
+    swap_page_from_pte(pte, pgdir);
+  }
   return 0;
 }

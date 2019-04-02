@@ -112,7 +112,9 @@ write_page_to_disk(uint dev, char *pg, uint blk)
     As one page requires 8 disk blocks
     */
     memmove(buffer->data,pg+ithPartOfPage,512);   // write 512 bytes to the block
+    begin_op();
     log_write(buffer);
+    end_op();
     brelse(buffer);                               //release lock
     end_op();
   }

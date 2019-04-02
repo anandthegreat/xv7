@@ -71,7 +71,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
     if((pte = walkpgdir(pgdir, a, 1)) == 0)
       return -1;
     if(*pte & PTE_P)
-      panic("remap");
+      panic("remap: in vm.c");
     *pte = pa | perm | PTE_P;
     if(a == last)
       break;
@@ -274,11 +274,12 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     else if((*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
       if(pa == 0)
-        panic("kfree");
+        panic("kfree in deallocuvm in vm.c");
       char *v = P2V(pa);
       kfree(v);
       *pte = 0;
     }
+    //****************xv7*******************
     else if(*pte & PTE_SWAPPED){
         int block_id= (*pte)>>12;
         bfree_page(ROOTDEV,block_id);
@@ -321,13 +322,13 @@ select_a_victim(pde_t *pgdir)
 {
   pte_t *pte;
   for(int i=0; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
-    cprintf("i wala loop\t");
+  //  cprintf("i wala loop\n");
     if((pte=walkpgdir(pgdir,(char*)i,0))!= 0) //if mapping exists (0 as 3rd argument as we dont want to create mapping if does not exists)
-		  {     cprintf("walkpgdir successful\t");
-			     if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
+		  {     //cprintf("walkpgdir successful\n");
+			     if(*pte & PTE_P) //(present)  --- conditions needs to be checked
            {   if(*pte & ~PTE_A)             //access bit is NOT set.
                {
-                 cprintf("apun 3456889 hai\n");
+                 cprintf("Victim Found, returning from select_a_victim\n");
                  return (pte_t*)(pte);
                }
            }
@@ -336,14 +337,15 @@ select_a_victim(pde_t *pgdir)
         cprintf("walkpgdir failed \n ");
       }
 	}
-  cprintf("bahar aa gaya  ");
+
+  cprintf("bahar aa gaya  \n\n\n\n");
   return 0;
 }
 
 // Clear access bit of a random pte.
 void
 clearaccessbit(pde_t *pgdir)
-{ pte_t *pte;
+ { pte_t *pte;
   int count=0;
   for(int i=0;i<KERNBASE;i+=PGSIZE){
       if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
@@ -364,6 +366,7 @@ clearaccessbit(pde_t *pgdir)
     if(count==103)   //10% of the 1024 pages cleared
       return;
   }
+
 }
 
 // return the disk block-id, if the virtual address
@@ -407,8 +410,37 @@ copyuvm(pde_t *pgdir, uint sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
+
+
+    //********************xv7***************
+    // if(*pte & PTE_SWAPPED){
+    //   //panic("parent page has been swapped to disk");
+    //   int blockid=getswappedblk(pgdir,i);
+    //   char swappedPage[4096]="";
+    //   read_page_from_disk(ROOTDEV,swappedPage,blockid);
+    //   char *bringSwappedPageBack=kalloc();                //will contain swapped page;
+    //   if(bringSwappedPageBack==0){
+    // 		//************xv7 swapping yha krni hai**************
+    //     pte_t* pteVictim=select_a_victim(pgdir);
+    //     if(pteVictim==0){
+    //       clearaccessbit(pgdir);
+    //       pteVictim=select_a_victim(pgdir);
+    //     }
+    //     swap_page_from_pte(pteVictim,pgdir);
+    //     bringSwappedPageBack=kalloc();
+    // 	}
+    //
+    //    memmove(bringSwappedPageBack,swappedPage,4096);
+    //    *pte=V2P(bringSwappedPageBack) | PTE_W | PTE_U | PTE_P;
+    //    *pte &= ~PTE_SWAPPED;
+    //    bfree_page(ROOTDEV,blockid);
+    //    lcr3(V2P(pgdir));
+    // }
+    //*********************************************
+
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
+
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)

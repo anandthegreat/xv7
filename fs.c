@@ -48,7 +48,9 @@ bzero(int dev, int bno)
 
   bp = bread(dev, bno);
   memset(bp->data, 0, BSIZE);
+  begin_op();     //xv7
   log_write(bp);
+  end_op();       //xv7
   brelse(bp);
 }
 
@@ -66,12 +68,12 @@ balloc(uint dev)
     for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
-        //begin_op();
+        begin_op();
         bp->data[bi/8] |= m;  // Mark block in use.
         log_write(bp);
         brelse(bp);
         bzero(dev, b + bi);
-      //  end_op();
+        end_op();
         return b + bi;
       }
     }
@@ -133,10 +135,10 @@ balloc_page(uint dev)
       // }
 
       indexNCB++;
-      begin_op();
+      //begin_op();
       allocatedBlocks[indexNCB] = balloc(dev);
-      end_op();
-      
+      //end_op();
+
       if(i>0){
           if((allocatedBlocks[indexNCB]-allocatedBlocks[indexNCB-1])!=1)  //this allocated block in non consecutive
           {
@@ -147,6 +149,7 @@ balloc_page(uint dev)
     for(int i=0;i<=indexNCB-8;i++){
       bfree(ROOTDEV,allocatedBlocks[i]);    //free unnecesarily allocated blocks
     }
+    numallocblocks+=1;
 	  return allocatedBlocks[indexNCB-7];  //return last 8 blocks (address of 1st block among them)
 }
 
@@ -158,6 +161,7 @@ bfree_page(int dev, uint b)
   for(uint i=0;i<8;i++){
     bfree(ROOTDEV,b+i);
   }
+  numallocblocks-=1;
 
 }
 
@@ -175,7 +179,9 @@ bfree(int dev, uint b)
   if((bp->data[bi/8] & m) == 0)
     panic("freeing free block");
   bp->data[bi/8] &= ~m;
+  begin_op();   //xv7
   log_write(bp);
+  end_op();     //xv7
   brelse(bp);
 }
 
@@ -289,7 +295,9 @@ ialloc(uint dev, short type)
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
+      begin_op();   //xv7
       log_write(bp);   // mark it allocated on the disk
+      end_op();   //xv7
       brelse(bp);
       return iget(dev, inum);
     }
@@ -316,7 +324,9 @@ iupdate(struct inode *ip)
   dip->nlink = ip->nlink;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  begin_op();   //xv7
   log_write(bp);
+  end_op();     //XV7
   brelse(bp);
 }
 
@@ -475,7 +485,9 @@ bmap(struct inode *ip, uint bn)
     a = (uint*)bp->data;
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
+      begin_op();   //xv7
       log_write(bp);
+      end_op();     //xv7
     }
     brelse(bp);
     return addr;
@@ -584,7 +596,9 @@ writei(struct inode *ip, char *src, uint off, uint n)
     bp = bread(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp->data + off%BSIZE, src, m);
+    begin_op();     //xv7
     log_write(bp);
+    end_op();       //xv7
     brelse(bp);
   }
 
