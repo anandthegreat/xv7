@@ -48,9 +48,7 @@ bzero(int dev, int bno)
 
   bp = bread(dev, bno);
   memset(bp->data, 0, BSIZE);
-  begin_op();     //xv7
   log_write(bp);
-  end_op();       //xv7
   brelse(bp);
 }
 
@@ -89,51 +87,10 @@ balloc(uint dev)
 uint
 balloc_page(uint dev)
 {
-  //*****************xv7*****************
-  //int b, bi, m;
-//  struct buf *bp;
-  /*
-    Number of blocks in xv6=20985
-    if we get non consecutive blocks, then we need to first mark it as in use
-    and then free them when we get 8 consecutive blocks,
-    otherwise, we will get same non consecutive blocks again and again
-  */
   uint allocatedBlocks[100000];
   int indexNCB=-1;     //pointer for above array, keeps track till where it is filled
   // bp = 0;
   for(int i=0;i<8;i++){
-
-      // for(b = 0; b < sb.size; b += BPB){    //for each block in superblock
-      //
-      //   /*
-      //   Start from the first free bitmap block (some bitmap bits may not be free in this block, but we
-      //   need 8 consecutive bitmap bits which are free in this block.
-      //   If 8 consecutive bits aren't free, mark all of them as used and check in another block.
-      //   */
-      //   bp = bread(dev, BBLOCK(b, sb));
-      //   /* for each bit in this block (this loop will run 4096 times for each block)
-      //      as each block contains 512 bytes =512*8=4096 bits
-      //   */
-      //   for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
-      //     m = 1 << (bi % 8);        //will help in checking the bitmap bit value
-      //     if((bp->data[bi/8] & m) == 0){  // Is block free? (i.e, it the bitmap bit 0? if yes , the corresponding block will be free)
-      //       begin_op();
-      //       bp->data[bi/8] |= m;  // Mark block in use. i.e. set bitmap bit to 1.
-      //       log_write(bp);        //dikkat yahan hai....
-      //       cprintf("\n\n\n\nthe dark knight rises\n");
-      //       if(holdingsleep(&bp->lock))
-      //         brelse(bp);           //release the lock
-      //       bzero(dev, b + bi);   //zero the block which we are going to return becauseI think it may contain garbage data.
-      //       end_op();
-      //       indexNCB++;
-      //       allocatedBlocks[indexNCB]= b + bi;
-      //     }
-      //   }
-      //   cprintf("\n\n\n\nbruce wayne\n");
-      //   if(holdingsleep(&bp->lock))
-      //     brelse(bp);
-      // }
-
       indexNCB++;
       //begin_op();
       allocatedBlocks[indexNCB] = balloc(dev);
@@ -145,7 +102,7 @@ balloc_page(uint dev)
               i=0;    //start allocating blocks again
           }
       }
-}
+    }
     for(int i=0;i<=indexNCB-8;i++){
       bfree(ROOTDEV,allocatedBlocks[i]);    //free unnecesarily allocated blocks
     }
@@ -158,11 +115,11 @@ balloc_page(uint dev)
 void
 bfree_page(int dev, uint b)
 { //*******************xv7*****************
+  cprintf("In Bfree Page\n");
   for(uint i=0;i<8;i++){
     bfree(ROOTDEV,b+i);
   }
   numallocblocks-=1;
-
 }
 
 // Free a disk block.
@@ -179,9 +136,10 @@ bfree(int dev, uint b)
   if((bp->data[bi/8] & m) == 0)
     panic("freeing free block");
   bp->data[bi/8] &= ~m;
-  begin_op();   //xv7
+  //*******xv7 : permanent, dont remove *********
+  begin_op();
   log_write(bp);
-  end_op();     //xv7
+  end_op();
   brelse(bp);
 }
 
@@ -295,9 +253,7 @@ ialloc(uint dev, short type)
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
-      begin_op();   //xv7
       log_write(bp);   // mark it allocated on the disk
-      end_op();   //xv7
       brelse(bp);
       return iget(dev, inum);
     }
@@ -324,9 +280,7 @@ iupdate(struct inode *ip)
   dip->nlink = ip->nlink;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  begin_op();   //xv7
   log_write(bp);
-  end_op();     //XV7
   brelse(bp);
 }
 
@@ -485,9 +439,7 @@ bmap(struct inode *ip, uint bn)
     a = (uint*)bp->data;
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
-      begin_op();   //xv7
       log_write(bp);
-      end_op();     //xv7
     }
     brelse(bp);
     return addr;
@@ -596,9 +548,7 @@ writei(struct inode *ip, char *src, uint off, uint n)
     bp = bread(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp->data + off%BSIZE, src, m);
-    begin_op();     //xv7
     log_write(bp);
-    end_op();       //xv7
     brelse(bp);
   }
 

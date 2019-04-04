@@ -71,7 +71,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
     if((pte = walkpgdir(pgdir, a, 1)) == 0)
       return -1;
     if(*pte & PTE_P)
-      panic("remap: in vm.c");
+      panic("remap in mappages in vm.c");
     *pte = pa | perm | PTE_P;
     if(a == last)
       break;
@@ -274,16 +274,15 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     else if((*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
       if(pa == 0)
-        panic("kfree in deallocuvm in vm.c");
+        panic("kfree");
       char *v = P2V(pa);
       kfree(v);
       *pte = 0;
     }
-    //****************xv7*******************
-    else if(*pte & PTE_SWAPPED){
-        int block_id= (*pte)>>12;
-        bfree_page(ROOTDEV,block_id);
-      }
+    // else if(*pte & PTE_SWAPPED){
+    //     // int block_id= (*pte)>>12;
+    //     // bfree_page(ROOTDEV,block_id);
+    //   }
   }
   return newsz;
 }
@@ -321,14 +320,16 @@ pte_t*
 select_a_victim(pde_t *pgdir)
 {
   pte_t *pte;
-  for(int i=0; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
-  //  cprintf("i wala loop\n");
+  for(int i=409600; i<KERNBASE;i+=PGSIZE){    //for all pages in the user virtual space
+  //  cprintf("i wala loop\t");
     if((pte=walkpgdir(pgdir,(char*)i,0))!= 0) //if mapping exists (0 as 3rd argument as we dont want to create mapping if does not exists)
-		  {     //cprintf("walkpgdir successful\n");
-			     if(*pte & PTE_P) //(present)  --- conditions needs to be checked
+		  {    // cprintf("walkpgdir successful\t");
+			     if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
            {   if(*pte & ~PTE_A)             //access bit is NOT set.
-               {
-                 cprintf("Victim Found, returning from select_a_victim\n");
+               { if(i==409600)
+                  cprintf("409600\n");
+                *pte = *pte | PTE_A;
+                 cprintf("returning victim\n");
                  return (pte_t*)(pte);
                }
            }
@@ -337,17 +338,16 @@ select_a_victim(pde_t *pgdir)
         cprintf("walkpgdir failed \n ");
       }
 	}
-
-  cprintf("bahar aa gaya  \n\n\n\n");
+  cprintf("bahar aa gaya  ");
   return 0;
 }
 
 // Clear access bit of a random pte.
 void
 clearaccessbit(pde_t *pgdir)
- { pte_t *pte;
+{ pte_t *pte;
   int count=0;
-  for(int i=0;i<KERNBASE;i+=PGSIZE){
+  for(int i=409600;i<KERNBASE;i+=PGSIZE){
       if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
         cprintf("walkpkgdir mei");
         if(*pte & PTE_P){
@@ -366,7 +366,6 @@ clearaccessbit(pde_t *pgdir)
     if(count==103)   //10% of the 1024 pages cleared
       return;
   }
-
 }
 
 // return the disk block-id, if the virtual address
@@ -411,51 +410,51 @@ copyuvm(pde_t *pgdir, uint sz)
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
 
+    if(!(*pte & PTE_P)){
+    //  *********************xv7******************
+      // int blockid=-1;                 //disk id where the page was swapped
+      // char *swappedPage;      //to get back page from disk, if swapped
+      // char *mem2;
+      // cprintf("\npage was swapped\n");
+      // swappedPage=kalloc();      //to get back page from disk, if swapped
+      // if(swappedPage==0){
+      //   cprintf("\nnot able kalloc for retreiving swapped page, swapping some pages\t");
+      //   swap_page(pgdir);
+      //   swappedPage=kalloc();
+      //   if(swappedPage!=0)
+      //    cprintf("\nnow i have got some memory :)\t");
+      // }
+      // blockid=getswappedblk(pgdir,i);      //disk id where the page was swapped
+      // read_page_from_disk(ROOTDEV,swappedPage,blockid);
+      // mem2=kalloc();
+      //
+      // if(mem2==0){
+      //   swap_page(pgdir);
+      //   mem2=kalloc();             //now a physical page has been swapped to disk and free, so this time we will get physical page for sure.
+      // }
+      // memmove(mem2,swappedPage,4096);
+      //
+      // *pte=V2P(mem2) | PTE_W | PTE_U | PTE_P;
+      // *pte &= ~PTE_SWAPPED;
+      //
+      // bfree_page(ROOTDEV,blockid);
+      //
+      // lcr3(V2P(pgdir));
 
-    //********************xv7***************
-    // if(*pte & PTE_SWAPPED){
-    //   //panic("parent page has been swapped to disk");
-    //   int blockid=getswappedblk(pgdir,i);
-    //   char swappedPage[4096]="";
-    //   read_page_from_disk(ROOTDEV,swappedPage,blockid);
-    //   char *bringSwappedPageBack=kalloc();                //will contain swapped page;
-    //   if(bringSwappedPageBack==0){
-    // 		//************xv7 swapping yha krni hai**************
-    //     pte_t* pteVictim=select_a_victim(pgdir);
-    //     if(pteVictim==0){
-    //       clearaccessbit(pgdir);
-    //       pteVictim=select_a_victim(pgdir);
-    //     }
-    //     swap_page_from_pte(pteVictim,pgdir);
-    //     bringSwappedPageBack=kalloc();
-    // 	}
-    //
-    //    memmove(bringSwappedPageBack,swappedPage,4096);
-    //    *pte=V2P(bringSwappedPageBack) | PTE_W | PTE_U | PTE_P;
-    //    *pte &= ~PTE_SWAPPED;
-    //    bfree_page(ROOTDEV,blockid);
-    //    lcr3(V2P(pgdir));
-    // }
-    //*********************************************
 
-    if(!(*pte & PTE_P))
-      panic("copyuvm: page not present");
+    //  panic("copyuvm: page not present");
+    }
 
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
     {
-      goto bad;
-      //swap a page to disk and kalloc
-      // pte_t* pte=select_a_victim(pgdir);              //returns *pte
-      // if(pte==0){                                     //If this is true, victim is not found in 1st attempt. Inside this function
-      //   clearaccessbit(pgdir);                        //Accessbits are cleared,
-      //   pte=select_a_victim(pgdir);                   //then victim is selected again. Victim is found this time.
-      // }
-      // swap_page_from_pte(pte,pgdir);                  //swap victim page to disk
-      // mem=kalloc();
-      // if(mem==0)
-      //   cprintf("unable to get memory in copyuvm");
+    //  goto bad;
+    //swap a page to disk and kalloc
+      swap_page(pgdir);
+      mem=kalloc();
+      if(mem==0)
+        cprintf("unable to get memory in copyuvm");
     }
 
     memmove(mem, (char*)P2V(pa), PGSIZE);

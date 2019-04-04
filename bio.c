@@ -103,20 +103,18 @@ write_page_to_disk(uint dev, char *pg, uint blk)
   int blockno=0;
   int ithPartOfPage=0;    //which part of page (out of 8) is to be written to disk
   for(int i=0;i<8;i++){
-    begin_op();           //for atomicity , the block must be written to the disk
+    // begin_op();           //for atomicity , the block must be written to the disk
     ithPartOfPage=i*512;
     blockno=blk+i;
-    buffer=bread(ROOTDEV,blockno);
+    buffer=bget(ROOTDEV,blockno);
     /*
     Writing physical page to disk by dividing it into 8 pieces (4096 bytes/8 = 512 bytes = 1 block)
     As one page requires 8 disk blocks
     */
     memmove(buffer->data,pg+ithPartOfPage,512);   // write 512 bytes to the block
-    begin_op();
-    log_write(buffer);
-    end_op();
+    bwrite(buffer);
     brelse(buffer);                               //release lock
-    end_op();
+    // end_op();
   }
 }
 

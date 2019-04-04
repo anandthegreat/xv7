@@ -10,6 +10,7 @@
 #include "paging.h"
 #include "fs.h"
 
+
 static pte_t * walkpgdir(pde_t *pgdir, const void *va, int alloc);
 int deallocuvmXV7(pde_t *pgdir, uint oldsz, uint newsz);
 static int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
@@ -31,24 +32,22 @@ myprocXV7(void) {
  * pte.
  */
 void
-swap_page_from_pte(pte_t *pte,pde_t *pgdir)
+swap_page_from_pte(pte_t *pte)
 {
 	//************xv7*************
 
-  uint physicalAddress=PTE_ADDR(*pte);
-  if(physicalAddress==0){
-    cprintf("arrey bhaisahab~~~~~~\n");
-  }
-
+  uint physicalAddress=PTE_ADDR(*pte);          //PTE_ADDR returns address in pte
+  if(physicalAddress==0)
+    cprintf("physicalAddress address is zero\n");
   uint diskPage=balloc_page(ROOTDEV);
 
 //  char *vaSwapPage=kalloc();                 //virtual address of physical page which needs to be swapped to disk
-  char vaSwapPage[4096]="";
+  // char vaSwapPage[4096]="";
 
-  memmove(vaSwapPage,(char*)P2V(physicalAddress),PGSIZE); //copy va to vaSwapPage : copied from 2071: copyuvm()
+  // memmove(vaSwapPage,(char*)P2V(physicalAddress),PGSIZE); //copy va to vaSwapPage : copied from 2071: copyuvm()
 
-  write_page_to_disk(ROOTDEV,vaSwapPage,diskPage);    //write this page to disk
-  *pte &= ~PTE_P;                 //clear present bit as the page has been swapped to the disk
+  write_page_to_disk(ROOTDEV,(char*)P2V(physicalAddress),diskPage);    //write this page to disk
+  //*pte &= ~PTE_P;                 //clear present bit as the page has been swapped to the disk
   //uint blockid=diskPage<<12;
 
   /*
@@ -56,7 +55,10 @@ swap_page_from_pte(pte_t *pte,pde_t *pgdir)
     So, when next time this pte is dereferenced, we know that the page has been swapped to
     the disk and we can bring this page again to memory
   */
-  *pte = diskPage | PTE_SWAPPED;
+  *pte = (*pte & 0x000000);     //make pte = null;
+  *pte = (diskPage << 12)| PTE_SWAPPED;
+  *pte = *pte & ~PTE_P;
+  *pte = *pte | PTE_A;
 
   /*PTE_SWAPPED (0x200) : created by me , needs to be set when swapping a page. */
 
@@ -65,10 +67,7 @@ swap_page_from_pte(pte_t *pte,pde_t *pgdir)
     lcr3
   */
 
-  lcr3(V2P(pgdir));         //This operation ensures that the older TLB entries are flushed
-//  cprintf("calling kfree in paging.c");
-  if(physicalAddress!=0)
-    kfree(P2V(physicalAddress));
+  kfree(P2V(physicalAddress));
   cprintf("\nIn swap page from pte\n");
 
 }
@@ -78,7 +77,24 @@ swap_page_from_pte(pte_t *pte,pde_t *pgdir)
 int
 swap_page(pde_t *pgdir)
 {
-	panic("swap_page is not implemented");
+  pte_t* pte=select_a_victim(pgdir);         //returns *pte
+  if(pte==0){                                     //If this is true, victim is not found in 1st attempt. Inside this function
+    cprintf("No victim found in 1st attempt. Clearing access bits.");
+    clearaccessbit(pgdir);                        //Accessbits are cleared,
+
+    cprintf("Finding victim again, after clearing access bits of 10%% pages.");
+    pte=select_a_victim(pgdir);                   //then victim is selected again. Victim is found this time.
+
+    if(pte!=0) cprintf("victim found");
+    else cprintf("Not found even in second attempt." );
+  }
+  else{                                           //This else is true, then victim is found in first attempt.
+    cprintf("Victim found in 1st attempt.");
+  }
+
+  swap_page_from_pte(pte);  //swap victim page to disk
+  lcr3(V2P(pgdir));         //This operation ensures that the older TLB entries are flushed
+	//panic("swap_page is not implemented");
 	return 1;
 }
 
@@ -104,69 +120,46 @@ map_address(pde_t *pgdir, uint addr)
 	uint a= PGROUNDDOWN(rcr2());			//rounds the address to a multiple of page size (PGSIZE)
 
   // int wasPageSwapped=0;
-  // pte_t *pte1=walkpgdir(pgdir, (char*)a, 1);
-  // int blockid=-1;                 //disk id where the page was swapped
-  // char swappedPage[4096]="";      //to get back page from disk, if swapped
-  // if(pte1!=0){
-  //   if(*pte1 & ~PTE_P){
-  //     cprintf("in check of swapped page\n");
-  //     wasPageSwapped=1;
-  //     blockid=getswappedblk(pgdir,addr);      //disk id where the page was swapped
-  //     read_page_from_disk(ROOTDEV,swappedPage,blockid);
-  //   }
-  // }
-
+  pte_t *pte=walkpgdir(pgdir, (char*)a, 0);
+  int blockid=-1;                 //disk id where the page was swapped
+  // char *swappedPage;
 
 	char *mem=kalloc();    //allocate a physical page
-  if(mem!=0)
-    cprintf("\n\n kalloc done without swapping\n\n");
+  // if(mem!=0)
+  //   cprintf("\n\n kalloc done without swapping\n\n");
 	if(mem==0){
 		//************xv7 swapping yha krni hai**************
-    pte_t* pte=select_a_victim(pgdir);              //returns *pte
-    if(pte==0){                                     //If this is true, victim is not found in 1st attempt. Inside this function
-      cprintf("No victim found in 1st attempt. Clearing access bits.");
-      clearaccessbit(pgdir);                        //Accessbits are cleared,
-
-      cprintf("Finding victim again, after clearing access bits of 10%% pages.");
-      pte=select_a_victim(pgdir);                   //then victim is selected again. Victim is found this time.
-
-      if(pte!=0) cprintf("victim found");
-      else cprintf("Not found even in second attempt." );
-    }
-    else{                                           //This else is true, then victim is found in first attempt.
-      cprintf("Victim found in 1st attempt.");
-    }
-
-    swap_page_from_pte(pte,pgdir);  //swap victim page to disk
+    swap_page(pgdir);
     mem=kalloc();             //now a physical page has been swapped to disk and free, so this time we will get physical page for sure.
     cprintf("kalloc success\n");
     // panic("allocuvm out of memory xv7 in mem==0/n");
 		// deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
-
 	}
 
-  // if(wasPageSwapped==1){
-  //   memmove(mem,swappedPage,4096);
-  //   *pte1=V2P(mem) | PTE_W | PTE_U | PTE_P;
-  //   *pte1 &= ~PTE_SWAPPED;
-  //   bfree_page(ROOTDEV,blockid);
-  //   lcr3(V2P(pgdir));
-  // }
+  if(pte!=0){
+    if(*pte & PTE_SWAPPED){
+      cprintf("\npage was swapped\n");
+      blockid=getswappedblk(pgdir,a);      //disk id where the page was swapped
+      read_page_from_disk(ROOTDEV, mem, blockid);
 
-//  else{
-    memset(mem,0,PGSIZE);
-  	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U | PTE_P)<0){
-  		panic("allocuvm out of memory xv7 in mappages/n");
-  		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
-  		kfree(mem);
-  	}
-  	else{
-  		cprintf("mappages working");
-  	}
-
-  //}
-
-	// panic("map_address is not implemented");
+      *pte=V2P(mem) | PTE_W | PTE_U | PTE_P;
+      *pte &= ~PTE_SWAPPED;
+      lcr3(V2P(pgdir));
+    }
+    else{
+      cprintf("Main Bhi Chaukidar\n");
+      memset(mem,0,PGSIZE);
+    	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U )<0){
+    		panic("allocuvm out of memory xv7 in mappages/n");
+    		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
+    		kfree(mem);
+    	}
+    	else{
+    		cprintf("mappages working");
+    	}
+    }
+  }
+  // panic("map_address is not implemented");
 }
 
 /* page fault handler */
@@ -233,7 +226,7 @@ deallocuvmXV7(pde_t *pgdir, uint oldsz, uint newsz)
     else if((*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
       if(pa == 0)
-        panic("kfree in deallocuvmXV7");
+        panic("kfree");
       char *v = P2V(pa);
       kfree(v);
       *pte = 0;
@@ -253,15 +246,10 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
   a = (char*)PGROUNDDOWN((uint)va);
   last = (char*)PGROUNDDOWN(((uint)va) + size - 1);
   for(;;){
-    if((pte = walkpgdir(pgdir, a, 1)) == 0){
-      cprintf("gadbad hai");
-        return -1;
-    }
-
-    if(*pte & PTE_P){
-      return 0;         //panic("remap : in paging.c");
-    }
-
+    if((pte = walkpgdir(pgdir, a, 1)) == 0)
+      return -1;
+    // if(*pte & PTE_P)
+    //   panic("remap in mappages in paging.c");
     *pte = pa | perm | PTE_P;
     if(a == last)
       break;

@@ -21,7 +21,7 @@ mem(void)
 	uint cur = 0;
 	uint count = 0;
 	uint total_count;
-//	int pid;
+	int pid;
 
 	printf(1, "mem test\n");
 
@@ -55,28 +55,28 @@ mem(void)
 	if (swap(start) != 0)
 		printf(1, "failed to swap %p\n", start);
 
-	// pid = fork();
-	//
-	// if (pid == 0){
-	// 	count = 0;
-	// 	m1 = start;
-	//
-	// 	while (count != total_count) {
-	// 		if (((int*)m1)[2] != count)
-	// 			goto failed;
-	// 		m1 = *(char**)m1;
-	// 		count++;
-	// 	}
-	// 	exit();
-	// }
-	// else if (pid < 0)
-	// {
-	// 	printf(1, "fork failed\n");
-	// }
-	// else if (pid > 0)
-	// {
-	// 	wait();
-	// }
+	pid = fork();
+
+	if (pid == 0){
+		count = 0;
+		m1 = start;
+
+		while (count != total_count) {
+			if (((int*)m1)[2] != count)
+				goto failed;
+			m1 = *(char**)m1;
+			count++;
+		}
+		exit();
+	}
+	else if (pid < 0)
+	{
+		printf(1, "fork failed\n");
+	}
+	else if (pid > 0)
+	{
+		wait();
+	}
 
 	printf(1, "mem ok %d\n", bstat());
 	exit();
