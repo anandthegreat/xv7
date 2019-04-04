@@ -106,7 +106,7 @@ balloc_page(uint dev)
     for(int i=0;i<=indexNCB-8;i++){
       bfree(ROOTDEV,allocatedBlocks[i]);    //free unnecesarily allocated blocks
     }
-    numallocblocks+=1;
+    numallocblocks+=8;
 	  return allocatedBlocks[indexNCB-7];  //return last 8 blocks (address of 1st block among them)
 }
 
@@ -119,7 +119,7 @@ bfree_page(int dev, uint b)
   for(uint i=0;i<8;i++){
     bfree(ROOTDEV,b+i);
   }
-  numallocblocks-=1;
+  numallocblocks-=8;
 }
 
 // Free a disk block.

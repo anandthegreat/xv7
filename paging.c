@@ -68,7 +68,7 @@ swap_page_from_pte(pte_t *pte)
   */
 
   kfree(P2V(physicalAddress));
-  cprintf("\nIn swap page from pte\n");
+  cprintf("\nReturning from swap page from pte\n");
 
 }
 
@@ -119,15 +119,12 @@ map_address(pde_t *pgdir, uint addr)
 	uint cursz= curproc->sz;
 	uint a= PGROUNDDOWN(rcr2());			//rounds the address to a multiple of page size (PGSIZE)
 
-  // int wasPageSwapped=0;
   pte_t *pte=walkpgdir(pgdir, (char*)a, 0);
   int blockid=-1;                 //disk id where the page was swapped
-  // char *swappedPage;
 
 	char *mem=kalloc();    //allocate a physical page
-  // if(mem!=0)
-  //   cprintf("\n\n kalloc done without swapping\n\n");
-	if(mem==0){
+
+  if(mem==0){
 		//************xv7 swapping yha krni hai**************
     swap_page(pgdir);
     mem=kalloc();             //now a physical page has been swapped to disk and free, so this time we will get physical page for sure.
@@ -138,7 +135,7 @@ map_address(pde_t *pgdir, uint addr)
 
   if(pte!=0){
     if(*pte & PTE_SWAPPED){
-      cprintf("\npage was swapped\n");
+      //cprintf("\npage was swapped\n");
       blockid=getswappedblk(pgdir,a);      //disk id where the page was swapped
       read_page_from_disk(ROOTDEV, mem, blockid);
 
@@ -147,9 +144,8 @@ map_address(pde_t *pgdir, uint addr)
       lcr3(V2P(pgdir));
     }
     else{
-      cprintf("Main Bhi Chaukidar\n");
       memset(mem,0,PGSIZE);
-    	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W | PTE_U )<0){
+    	if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_P | PTE_W | PTE_U )<0){
     		panic("allocuvm out of memory xv7 in mappages/n");
     		deallocuvmXV7(pgdir,cursz+PGSIZE, cursz);
     		kfree(mem);
