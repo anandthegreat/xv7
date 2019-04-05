@@ -106,7 +106,8 @@ balloc_page(uint dev)
     for(int i=0;i<=indexNCB-8;i++){
       bfree(ROOTDEV,allocatedBlocks[i]);    //free unnecesarily allocated blocks
     }
-    numallocblocks+=8;
+    numallocblocks+=1;      //*****************
+
 	  return allocatedBlocks[indexNCB-7];  //return last 8 blocks (address of 1st block among them)
 }
 
@@ -115,11 +116,12 @@ balloc_page(uint dev)
 void
 bfree_page(int dev, uint b)
 { //*******************xv7*****************
-  cprintf("In Bfree Page\n");
+  // cprintf("In Bfree Page\n");
   for(uint i=0;i<8;i++){
     bfree(ROOTDEV,b+i);
   }
-  numallocblocks-=8;
+  numallocblocks-=1;      //*****************
+
 }
 
 // Free a disk block.
@@ -137,9 +139,7 @@ bfree(int dev, uint b)
     panic("freeing free block");
   bp->data[bi/8] &= ~m;
   //*******xv7 : permanent, dont remove *********
-  begin_op();
-  log_write(bp);
-  end_op();
+  bwrite(bp);
   brelse(bp);
 }
 

@@ -58,7 +58,7 @@ swap_page_from_pte(pte_t *pte)
   *pte = (*pte & 0x000000);     //make pte = null;
   *pte = (diskPage << 12)| PTE_SWAPPED;
   *pte = *pte & ~PTE_P;
-  *pte = *pte | PTE_A;
+//  *pte = *pte | PTE_A;
 
   /*PTE_SWAPPED (0x200) : created by me , needs to be set when swapping a page. */
 

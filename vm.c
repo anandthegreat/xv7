@@ -271,6 +271,13 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
     if(!pte)
       a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
+
+    else if(*pte & PTE_SWAPPED){
+        uint block_id= (*pte)>>12;
+        bfree_page(ROOTDEV,block_id);
+        
+      }
+
     else if((*pte & PTE_P) != 0){
       pa = PTE_ADDR(*pte);
       if(pa == 0)
@@ -279,10 +286,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(v);
       *pte = 0;
     }
-    // else if(*pte & PTE_SWAPPED){
-    //     // int block_id= (*pte)>>12;
-    //     // bfree_page(ROOTDEV,block_id);
-    //   }
+
   }
   return newsz;
 }
@@ -327,10 +331,10 @@ select_a_victim(pde_t *pgdir)
 
            if(*pte & PTE_P) //if not dirty, or (present and access bit not set)  --- conditions needs to be checked
            {   if(*pte & ~PTE_A)             //access bit is NOT set.
-               { if(i==409600)
-                  cprintf("409600\n");
-                *pte = *pte | PTE_A;
-                 cprintf("returning victim\n");
+               {
+                  // cprintf("409600\n");
+                //*pte = *pte | PTE_A;
+                 // cprintf("returning victim\n");
                  return (pte_t*)(pte);
                }
            }
@@ -407,13 +411,15 @@ copyuvm(pde_t *pgdir, uint sz)
   char *mem;
   if((d = setupkvm()) == 0)
     return 0;
-
+  // cprintf("process size is: %d",sz);
   for(i = 0; i < sz; i += PGSIZE){
+    // cprintf("i is :%d",i);
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
 
     if(*pte & PTE_SWAPPED){
     //  *********************xv7******************
+    //cprintf("page was swapped\n");
       if((mem = kalloc()) == 0)
       {
         swap_page(pgdir);
@@ -426,12 +432,11 @@ copyuvm(pde_t *pgdir, uint sz)
       *pte &= ~PTE_SWAPPED;
       lcr3(V2P(pgdir));
 
-      //bfree_page(ROOTDEV,blockid);
+      bfree_page(ROOTDEV,blockid);
 
-    //  panic("copyuvm: page not present");
+      //panic("copyuvm: page not present");
     }
-
-    else{
+    //  cprintf("page was not swapped\n");
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
@@ -447,7 +452,6 @@ copyuvm(pde_t *pgdir, uint sz)
     memmove(mem, (char*)P2V(pa), PGSIZE);
     if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
       goto bad;
-  }
 }
   //cprintf("exiting from copyuvm");
   return d;
