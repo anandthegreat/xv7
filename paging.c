@@ -142,6 +142,7 @@ map_address(pde_t *pgdir, uint addr)
       *pte=V2P(mem) | PTE_W | PTE_U | PTE_P;
       *pte &= ~PTE_SWAPPED;
       lcr3(V2P(pgdir));
+      bfree_page(ROOTDEV,blockid);
     }
     else{
       memset(mem,0,PGSIZE);

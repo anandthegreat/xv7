@@ -275,7 +275,6 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     else if(*pte & PTE_SWAPPED){
         uint block_id= (*pte)>>12;
         bfree_page(ROOTDEV,block_id);
-        
       }
 
     else if((*pte & PTE_P) != 0){
@@ -335,7 +334,7 @@ select_a_victim(pde_t *pgdir)
                   // cprintf("409600\n");
                 //*pte = *pte | PTE_A;
                  // cprintf("returning victim\n");
-                 return (pte_t*)(pte);
+                 return pte;
                }
            }
       }
@@ -357,7 +356,7 @@ clearaccessbit(pde_t *pgdir)
   for(long i=4096;i<KERNBASE;i+=PGSIZE){
       if((pte=walkpgdir(pgdir,(char*)i,0))!= 0){
         cprintf("walkpkgdir mei");
-        if(*pte & PTE_P){
+        if((*pte & PTE_P) & (*pte & PTE_A)){
         // if((*pte & PTE_P) & (*pte & PTE_A)) { //access bit is 1
             *pte &= ~PTE_A;
             count=count+1;
