@@ -1,3 +1,45 @@
+# xv7 
+Implementation of Demand Paging and Swapping in xv6 with **all test cases passing**
+
+### Usage
+
+You can boot xv7 OS in qemu emulator:
+```
+sudo apt-get install qemu
+make qemu
+```
+To test demand paging :
+```
+memtest1
+```
+To test swapping and fork :
+```
+memtest2
+```
+
+### Changed files 
+
+1. **bio.c** *(for swapping)*
+    * write_page_to_disk()
+    * read_page_from_disk()
+2. **fs.c** *(for swapping)*
+    * balloc_page()
+    * bfree_page()
+3. **paging.c** *(for demand paging)*
+    * map_address()
+    * swap_page()
+    * swap_page_from_pte()
+4. **vm.c** *(for demand paging)*
+    * select_a_victim()
+    * clearaccessbit()
+    * getswappedblk()
+
+And a few minor changes at different places, all changes begin with the following comment:
+> ************xv7*************
+
+
+# About xv6  
+
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,
 but is implemented for a modern x86-based multiprocessor using ANSI C.
