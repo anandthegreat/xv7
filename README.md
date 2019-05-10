@@ -35,10 +35,11 @@ memtest2
     * getswappedblk()
 
 And a few minor changes at different places, all changes begin with the following comment:
-> ************xv7*************
+> \*\*\*\**\*\*\*\*\*\*\*xv7\*\*\*\*\*\*\*\*\*\*\*\*\*
 
 
-# About xv6  
+
+### About xv6  
 
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,
