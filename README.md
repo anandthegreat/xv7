@@ -16,7 +16,7 @@ To test swapping and fork :
 ```
 memtest2
 ```
-#### Important 
+#### Important :warning:
 > Replace README.MD with this [README](https://github.com/mit-pdos/xv6-public/blob/master/README) file, otherwise it won't run.
 
 ### Changed files 
